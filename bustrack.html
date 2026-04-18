@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BusTrack - Live Bus Tracker</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+.header { background: #1e293b; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
+.logo { font-size: 1.4rem; font-weight: 800; color: #f97316; }
+.tabs { display: flex; background: #1e293b; margin: 16px; border-radius: 14px; padding: 5px; gap: 5px; }
+.tab { flex: 1; padding: 12px; border: none; background: transparent; color: #94a3b8; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+.tab.active { background: #f97316; color: white; }
+.view { display: none; padding: 0 16px 16px; }
+.view.active { display: block; }
+.card { background: #1e293b; border-radius: 16px; padding: 18px; margin-bottom: 14px; border: 1px solid #334155; }
+.card-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #f97316; margin-bottom: 12px; }
+.input-field { width: 100%; background: #0f172a; border: 2px solid #334155; border-radius: 12px; padding: 13px 16px; color: #e2e8f0; font-size: 1rem; margin-bottom: 10px; outline: none; }
+.input-field:focus { border-color: #f97316; }
+.btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 1.05rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
+.btn-green { background: #10b981; color: white; }
+.btn-red { background: #ef4444; color: white; }
+.btn-orange { background: #f97316; color: white; }
+.status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 50px; font-weight: 700; font-size: 0.9rem; margin-bottom: 14px; }
+.status-on { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+.status-off { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+.pulse { animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.info-item { background: #0f172a; border-radius: 12px; padding: 12px; }
+.info-label { font-size: 0.65rem; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; }
+.info-value { font-size: 0.95rem; font-weight: 700; color: #e2e8f0; }
+.orange { color: #f97316; }
+.bus-list { display: flex; flex-direction: column; gap: 10px; }
+.bus-item { background: #0f172a; border-radius: 14px; padding: 16px; border: 1px solid #334155; display: flex; align-items: center; gap: 14px; cursor: pointer; }
+.bus-name { font-weight: 700; font-size: 1rem; }
+.bus-route { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+.live-badge { font-size: 0.75rem; color: #10b981; font-weight: 700; }
+.map-box { background: #0f172a; border-radius: 14px; height: 200px; position: relative; overflow: hidden; border: 1px solid #334155; margin-top: 10px; }
+.bus-dot { position: absolute; font-size: 1.8rem; transform: translate(-50%, -50%); transition: all 2s ease; }
+.you-dot { position: absolute; bottom: 25px; right: 35px; font-size: 1.2rem; }
+.eta-box { display: flex; justify-content: space-between; align-items: center; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); border-radius: 12px; padding: 14px 16px; margin-top: 10px; }
+.eta-num { font-size: 1.8rem; font-weight: 800; color: #f97316; }
+.eta-label { font-size: 0.7rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+.empty { text-align: center; padding: 40px 20px; color: #475569; }
+.empty-icon { font-size: 3rem; margin-bottom: 8px; }
+.back-btn { background: #334155; border: none; border-radius: 10px; padding: 8px 14px; color: #94a3b8; font-weight: 600; cursor: pointer; margin-bottom: 14px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; border: 1px solid #f97316; border-radius: 12px; padding: 12px 22px; font-weight: 600; font-size: 0.9rem; z-index: 999; transition: transform 0.4s; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🚌 BusTrack</div>
+  <div style="font-size:0.75rem;color:#475569">Live Tracking</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab1" onclick="switchTab('driver')">🚘 Driver</button>
+  <button class="tab" id="tab2" onclick="switchTab('passenger')">🧍 Passenger</button>
+</div>
+
+<div class="view active" id="driverView">
+  <div class="card">
+    <div class="card-title">👤 Driver Info</div>
+    <input class="input-field" id="driverName" placeholder="तुमचं नाव टाका" />
+    <input class="input-field" id="routeName" placeholder="Route टाका (उदा: Route 42 - Pune)" />
+  </div>
+  <div class="card">
+    <div class="card-title">📡 Location Sharing</div>
+    <div id="driverStatus" class="status-badge status-off">
+      <span class="dot"></span> <span>Sharing बंद आहे</span>
+    </div>
+    <button class="btn btn-green" id="shareBtn" onclick="toggleSharing()">▶️ Location Sharing सुरू करा</button>
+  </div>
+  <div class="card" id="liveCard" style="display:none">
+    <div class="card-title">📊 Live Data</div>
+    <div class="info-grid">
+      <div class="info-item"><div class="info-label">Latitude</div><div class="info-value" id="dLat">---</div></div>
+      <div class="info-item"><div class="info-label">Longitude</div><div class="info-value" id="dLng">---</div></div>
+      <div class="info-item"><div class="info-label">Speed</div><div class="info-value orange" id="dSpeed">0 km/h</div></div>
+      <div class="info-item"><div class="info-label">Accuracy</div><div class="info-value" id="dAcc">---</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="passengerView">
+  <div id="busList">
+    <div class="card">
+      <div class="card-title">🚌 Live Buses</div>
+      <div id="busListInner">
+        <div class="empty"><div class="empty-icon">🔍</div><p>शोधत आहे...</p></div>
+      </div>
+    </div>
+    <button class="btn btn-orange" onclick="loadBuses()" style="margin-top:0">🔄 Refresh करा</button>
+  </div>
+  <div id="busDetail" style="display:none">
+    <button class="back-btn" onclick="showBusList()">← मागे जा</button>
+    <div class="card">
+      <div class="card-title">🚌 Bus Info</div>
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">Driver</div><div class="info-value" id="pDriver">---</div></div>
+        <div class="info-item"><div class="info-label">Route</div><div class="info-value" id="pRoute">---</div></div>
+        <div class="info-item"><div class="info-label">Speed</div><div class="info-value orange" id="pSpeed">---</div></div>
+        <div class="info-item"><div class="info-label">Update</div><div class="info-value" id="pUpdate">---</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🗺️ Live Map</div>
+      <div class="map-box">
+        <div class="you-dot">🧍</div>
+        <div class="bus-dot" id="busDot" style="top:40%;left:40%">🚌</div>
+      </div>
+      <div class="eta-box">
+        <div>
+          <div class="eta-label">⏱ Estimated Time</div>
+          <div><span class="eta-num" id="etaMin">--</span> min</div>
+        </div>
+        <div style="text-align:right">
+          <div class="eta-label">📍 Location</div>
+          <div class="info-value" id="pLoc" style="font-size:0.8rem">---</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var SURL = 'https://mifvujezesxbvlvgslcn.supabase.co';
+var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZnZ1amV6ZXN4YnZsdmdzbGNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5OTA3NzEsImV4cCI6MjA5MTU2Njc3MX0.SlMxrIDW9eVPRaTn_J6JGly4jON8pFfaCLiQxrx5b7c';
+
+var isSharing = false;
+var watchId = null;
+var driverId = 'bus_' + Math.random().toString(36).substr(2,8);
+var selectedBus = null;
+var refreshInt = null;
+var mapX = 40, mapY = 40;
+
+function api(path, method, body) {
+  var opts = {
+    method: method || 'GET',
+    headers: {
+      'apikey': SKEY,
+      'Authorization': 'Bearer ' + SKEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(SURL + path, opts).then(function(r) { return r.json(); });
+}
+
+function switchTab(tab) {
+  document.getElementById('driverView').classList.toggle('active', tab === 'driver');
+  document.getElementById('passengerView').classList.toggle('active', tab === 'passenger');
+  document.getElementById('tab1').classList.toggle('active', tab === 'driver');
+  document.getElementById('tab2').classList.toggle('active', tab === 'passenger');
+  if (tab === 'passenger') loadBuses();
+}
+
+function toggleSharing() {
+  if (!isSharing) {
+    var name = document.getElementById('driverName').value.trim();
+    var route = document.getElementById('routeName').value.trim();
+    if (!name || !route) { showToast('नाव आणि Route टाका!'); return; }
+    startSharing(name, route);
+  } else {
+    stopSharing();
+  }
+}
+
+function startSharing(name, route) {
+  if (!navigator.geolocation) { showToast('GPS नाही!'); return; }
+  showToast('GPS शोधत आहे...');
+  watchId = navigator.geolocation.watchPosition(
+    function(pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      var acc = pos.coords.accuracy;
+      var spd = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(1) : 0;
+
+      if (!isSharing) {
+        isSharing = true;
+        document.getElementById('driverStatus').className = 'status-badge status-on';
+        document.getElementById('driverStatus').innerHTML = '<span class="dot pulse"></span> <span>Sharing सुरू आहे ✅</span>';
+        document.getElementById('shareBtn').className = 'btn btn-red';
+        document.getElementById('shareBtn').textContent = '⏹️ Sharing थांबवा';
+        document.getElementById('liveCard').style.display = 'block';
+        document.getElementById('driverName').disabled = true;
+        document.getElementById('routeName').disabled = true;
+        showToast('Location Sharing सुरू झाले!');
+      }
+
+      document.getElementById('dLat').textContent = lat.toFixed(5);
+      document.getElementById('dLng').textContent = lng.toFixed(5);
+      document.getElementById('dSpeed').textContent = spd + ' km/h';
+      document.getElementById('dAcc').textContent = '+-' + Math.round(acc) + 'm';
+
+      api('/rest/v1/bus_locations', 'POST', {
+        id: driverId,
+        driver_name: name,
+        route: route,
+        latitude: lat,
+        longitude: lng,
+        speed: parseFloat(spd),
+        updated_at: new Date().toISOString()
+      });
+    },
+    function(err) {
+      var msgs = {1:'GPS permission द्या - Settings मध्ये Location ON करा', 2:'GPS signal नाही - बाहेर जा', 3:'GPS timeout - पुन्हा try करा'};
+      showToast(msgs[err.code] || 'GPS error');
+    },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+function stopSharing() {
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  isSharing = false;
+  api('/rest/v1/bus_locations?id=eq.' + driverId, 'DELETE');
+  document.getElementById('driverStatus').className = 'status-badge status-off';
+  document.getElementById('driverStatus').innerHTML = '<span class="dot"></span> <span>Sharing बंद आहे</span>';
+  document.getElementById('shareBtn').className = 'btn btn-green';
+  document.getElementById('shareBtn').textContent = '▶️ Location Sharing सुरू करा';
+  document.getElementById('liveCard').style.display = 'none';
+  document.getElementById('driverName').disabled = false;
+  document.getElementById('routeName').disabled = false;
+  showToast('Sharing थांबवले');
+}
+
+function loadBuses() {
+  var inner = document.getElementById('busListInner');
+  inner.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>शोधत आहे...</p></div>';
+  api('/rest/v1/bus_locations?select=*&order=updated_at.desc').then(function(data) {
+    var now = Date.now();
+    var live = (data || []).filter(function(b) {
+      return (now - new Date(b.updated_at).getTime()) < 120000;
+    });
+    if (live.length === 0) {
+      inner.innerHTML = '<div class="empty"><div class="empty-icon">🚌</div><p>कोणतीही Live bus नाही<br><small>Driver ने sharing सुरू केली की दिसेल</small></p></div>';
+      return;
+    }
+    inner.innerHTML = '';
+    var list = document.createElement('div');
+    list.className = 'bus-list';
+    live.forEach(function(bus) {
+      var item = document.createElement('div');
+      item.className = 'bus-item';
+      item.innerHTML = '<div style="font-size:2rem">🚌</div><div style="flex:1"><div class="bus-name">' + bus.driver_name + '</div><div class="bus-route">' + bus.route + '</div></div><div class="live-badge">● LIVE</div>';
+      item.onclick = function() { showBusDetail(bus); };
+      list.appendChild(item);
+    });
+    inner.appendChild(list);
+  }).catch(function() { showToast('Error - Internet तपासा'); });
+}
+
+function showBusDetail(bus) {
+  selectedBus = bus;
+  document.getElementById('busList').style.display = 'none';
+  document.getElementById('busDetail').style.display = 'block';
+  updateBusDetail(bus);
+  if (refreshInt) clearInterval(refreshInt);
+  refreshInt = setInterval(function() {
+    api('/rest/v1/bus_locations?id=eq.' + selectedBus.id + '&select=*').then(function(data) {
+      if (data && data[0]) updateBusDetail(data[0]);
+    });
+  }, 3000);
+}
+
+function updateBusDetail(bus) {
+  document.getElementById('pDriver').textContent = bus.driver_name;
+  document.getElementById('pRoute').textContent = bus.route;
+  document.getElementById('pSpeed').textContent = (bus.speed || 0) + ' km/h';
+  document.getElementById('pUpdate').textContent = new Date(bus.updated_at).toLocaleTimeString();
+  document.getElementById('pLoc').textContent = parseFloat(bus.latitude).toFixed(4) + ', ' + parseFloat(bus.longitude).toFixed(4);
+  mapX += (Math.random() - 0.4) * 5;
+  mapY += (Math.random() - 0.5) * 4;
+  mapX = Math.max(10, Math.min(85, mapX));
+  mapY = Math.max(10, Math.min(85, mapY));
+  document.getElementById('busDot').style.left = mapX + '%';
+  document.getElementById('busDot').style.top = mapY + '%';
+  document.getElementById('etaMin').textContent = Math.floor(2 + Math.random() * 8);
+}
+
+function showBusList() {
+  if (refreshInt) clearInterval(refreshInt);
+  document.getElementById('busList').style.display = 'block';
+  document.getElementById('busDetail').style.display = 'none';
+  loadBuses();
+}
+
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 3500);
+}
+
+loadBuses();
+</script>
+</body>
+</html>
