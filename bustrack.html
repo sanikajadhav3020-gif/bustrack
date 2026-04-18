@@ -239,7 +239,7 @@ function loadBuses() {
   api('/rest/v1/bus_locations?select=*&order=updated_at.desc').then(function(data) {
     var now = Date.now();
     var live = (data || []).filter(function(b) {
-      return (now - new Date(b.updated_at).getTime()) < 120000;
+      return (now - new Date(b.updated_at).getTime()) < 3600000;
     });
     if (live.length === 0) {
       inner.innerHTML = '<div class="empty"><div class="empty-icon">🚌</div><p>कोणतीही Live bus नाही<br><small>Driver ने sharing सुरू केली की दिसेल</small></p></div>';
