@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BusTrack Admin Panel</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+/* HEADER */
+.header { background: #1e293b; padding: 16px 20px; border-bottom: 2px solid #f97316; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-size: 1.3rem; font-weight: 800; color: #f97316; }
+.admin-badge { background: #f97316; color: white; font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+
+/* TABS */
+.tabs { display: flex; background: #1e293b; margin: 16px; border-radius: 14px; padding: 5px; gap: 5px; }
+.tab { flex: 1; padding: 11px; border: none; background: transparent; color: #94a3b8; border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.tab.active { background: #f97316; color: white; }
+
+/* VIEWS */
+.view { display: none; padding: 0 16px 80px; }
+.view.active { display: block; }
+
+/* CARD */
+.card { background: #1e293b; border-radius: 16px; padding: 18px; margin-bottom: 14px; border: 1px solid #334155; }
+.card-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #f97316; margin-bottom: 14px; }
+
+/* INPUTS */
+.input-field { width: 100%; background: #0f172a; border: 2px solid #334155; border-radius: 12px; padding: 13px 16px; color: #e2e8f0; font-size: 1rem; margin-bottom: 10px; outline: none; }
+.input-field:focus { border-color: #f97316; }
+select.input-field { appearance: none; }
+
+/* BUTTONS */
+.btn { width: 100%; padding: 15px; border: none; border-radius: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
+.btn-orange { background: #f97316; color: white; }
+.btn-green { background: #10b981; color: white; }
+.btn-red { background: #ef4444; color: white; }
+.btn-sm { padding: 8px 14px; font-size: 0.8rem; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
+
+/* STOPS */
+.stops-container { margin-top: 10px; }
+.stop-item { display: flex; align-items: center; gap: 8px; background: #0f172a; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #334155; }
+.stop-num { background: #f97316; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+.stop-name { flex: 1; font-size: 0.9rem; }
+.stop-delete { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 0.75rem; }
+.add-stop-row { display: flex; gap: 8px; margin-top: 8px; }
+.add-stop-row input { flex: 1; }
+.add-stop-row button { background: #10b981; color: white; border: none; border-radius: 10px; padding: 0 16px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+
+/* ROUTE LIST */
+.route-item { background: #0f172a; border-radius: 14px; padding: 14px; margin-bottom: 10px; border: 1px solid #334155; }
+.route-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.route-name { font-weight: 700; font-size: 1rem; color: #e2e8f0; }
+.route-type { font-size: 0.7rem; background: rgba(249,115,22,0.2); color: #f97316; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+.route-stops { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+.route-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+/* EMPTY */
+.empty { text-align: center; padding: 30px; color: #475569; }
+.empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; border: 1px solid #f97316; border-radius: 12px; padding: 12px 22px; font-weight: 600; font-size: 0.9rem; z-index: 999; transition: transform 0.4s; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* LOGIN */
+.login-box { max-width: 340px; margin: 60px auto; padding: 0 16px; }
+.login-title { font-size: 1.5rem; font-weight: 800; color: #f97316; text-align: center; margin-bottom: 8px; }
+.login-sub { font-size: 0.85rem; color: #64748b; text-align: center; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage">
+  <div class="login-box">
+    <div style="text-align:center;font-size:3rem;margin-bottom:12px">🚌</div>
+    <div class="login-title">BusTrack Admin</div>
+    <div class="login-sub">फक्त Admin साठी</div>
+    <div class="card">
+      <input class="input-field" type="password" id="adminPass" placeholder="Admin Password टाका" />
+      <button class="btn btn-orange" onclick="checkLogin()">🔐 Login करा</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display:none">
+
+  <div class="header">
+    <div class="logo">🚌 BusTrack Admin</div>
+    <div class="admin-badge">ADMIN</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab1" onclick="switchTab('add')">➕ Route Add</button>
+    <button class="tab" id="tab2" onclick="switchTab('list')">📋 Routes List</button>
+  </div>
+
+  <!-- ADD ROUTE -->
+  <div class="view active" id="addView">
+
+    <div class="card">
+      <div class="card-title">🚌 Route Details</div>
+      <input class="input-field" id="routeName" placeholder="Route नाव (उदा: Magalvedha - Sagola)" />
+      <select class="input-field" id="busType">
+        <option value="">Bus Type निवडा</option>
+        <option value="Local Bus">Local Bus</option>
+        <option value="Mini Bus">Mini Bus</option>
+        <option value="College Bus">College Bus</option>
+        <option value="School Bus">School Bus</option>
+        <option value="Private Bus">Private Bus</option>
+        <option value="ST Bus">ST Bus</option>
+        <option value="Temple Bus">Temple Bus</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📍 Stops Add करा</div>
+      <div class="stops-container" id="stopsContainer">
+        <div class="empty">
+          <div class="empty-icon">📍</div>
+          <p>खाली stops add करा</p>
+        </div>
+      </div>
+      <div class="add-stop-row">
+        <input class="input-field" id="stopInput" placeholder="Stop चे नाव" style="margin:0" onkeyup="if(event.key==='Enter')addStop()" />
+        <button onclick="addStop()">+ Add</button>
+      </div>
+    </div>
+
+    <div class="card" id="previewCard" style="display:none">
+      <div class="card-title">👁️ Preview</div>
+      <div id="previewContent"></div>
+    </div>
+
+    <button class="btn btn-green" onclick="saveRoute()" style="margin: 0 16px; width: calc(100% - 32px)">
+      💾 Route Save करा
+    </button>
+
+  </div>
+
+  <!-- ROUTES LIST -->
+  <div class="view" id="listView">
+    <div class="card">
+      <div class="card-title">📋 सर्व Routes</div>
+      <div id="routesList">
+        <div class="empty"><div class="empty-icon">🔍</div><p>Loading...</p></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var SURL = 'https://mifvujezesxbvlvgslcn.supabase.co';
+var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZnZ1amV6ZXN4YnZsdmdzbGNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5OTA3NzEsImV4cCI6MjA5MTU2Njc3MX0.SlMxrIDW9eVPRaTn_J6JGly4jON8pFfaCLiQxrx5b7c';
+var ADMIN_PASS = 'bustrack2024';
+var stops = [];
+
+// LOGIN
+function checkLogin() {
+  var pass = document.getElementById('adminPass').value;
+  if (pass === ADMIN_PASS) {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    loadRoutes();
+  } else {
+    showToast('❌ चुकीचा Password!');
+  }
+}
+
+document.getElementById('adminPass').addEventListener('keyup', function(e) {
+  if (e.key === 'Enter') checkLogin();
+});
+
+// TABS
+function switchTab(tab) {
+  document.getElementById('addView').classList.toggle('active', tab === 'add');
+  document.getElementById('listView').classList.toggle('active', tab === 'list');
+  document.getElementById('tab1').classList.toggle('active', tab === 'add');
+  document.getElementById('tab2').classList.toggle('active', tab === 'list');
+  if (tab === 'list') loadRoutes();
+}
+
+// STOPS
+function addStop() {
+  var input = document.getElementById('stopInput');
+  var name = input.value.trim();
+  if (!name) return;
+  stops.push(name);
+  input.value = '';
+  renderStops();
+  updatePreview();
+}
+
+function removeStop(index) {
+  stops.splice(index, 1);
+  renderStops();
+  updatePreview();
+}
+
+function renderStops() {
+  var container = document.getElementById('stopsContainer');
+  if (stops.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📍</div><p>खाली stops add करा</p></div>';
+    return;
+  }
+  var html = '';
+  stops.forEach(function(stop, i) {
+    html += '<div class="stop-item">' +
+      '<div class="stop-num">' + (i+1) + '</div>' +
+      '<div class="stop-name">' + stop + '</div>' +
+      '<button class="stop-delete" onclick="removeStop(' + i + ')">✕</button>' +
+      '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function updatePreview() {
+  var routeName = document.getElementById('routeName').value.trim();
+  var busType = document.getElementById('busType').value;
+  var preview = document.getElementById('previewCard');
+  var content = document.getElementById('previewContent');
+
+  if (stops.length > 0) {
+    preview.style.display = 'block';
+    var html = '<div style="font-weight:700;color:#f97316;margin-bottom:8px">' + (routeName || 'Route नाव') + '</div>';
+    if (busType) html += '<div style="font-size:0.8rem;color:#64748b;margin-bottom:10px">' + busType + '</div>';
+    html += '<div style="font-size:0.85rem;color:#94a3b8">';
+    stops.forEach(function(s, i) {
+      html += '<span style="color:#f97316">●</span> ' + s;
+      if (i < stops.length - 1) html += ' → ';
+    });
+    html += '</div>';
+    content.innerHTML = html;
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+document.getElementById('routeName').addEventListener('input', updatePreview);
+document.getElementById('busType').addEventListener('change', updatePreview);
+
+// SAVE ROUTE
+function saveRoute() {
+  var routeName = document.getElementById('routeName').value.trim();
+  var busType = document.getElementById('busType').value;
+
+  if (!routeName) { showToast('⚠️ Route नाव टाका!'); return; }
+  if (!busType) { showToast('⚠️ Bus Type निवडा!'); return; }
+  if (stops.length < 2) { showToast('⚠️ कमीत कमी 2 stops टाका!'); return; }
+
+  fetch(SURL + '/rest/v1/routes', {
+    method: 'POST',
+    headers: {
+      'apikey': SKEY,
+      'Authorization': 'Bearer ' + SKEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      route_name: routeName,
+      bus_type: busType,
+      stops: stops
+    })
+  })
+  .then(function(r) {
+    if (r.ok || r.status === 201) {
+      showToast('✅ Route save झाला!');
+      document.getElementById('routeName').value = '';
+      document.getElementById('busType').value = '';
+      stops = [];
+      renderStops();
+      updatePreview();
+    } else {
+      showToast('❌ Error झाला!');
+    }
+  })
+  .catch(function() { showToast('❌ Internet तपासा!'); });
+}
+
+// LOAD ROUTES
+function loadRoutes() {
+  var list = document.getElementById('routesList');
+  list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>Loading...</p></div>';
+
+  fetch(SURL + '/rest/v1/routes?select=*&order=created_at.desc', {
+    headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">🚌</div><p>कोणताही Route नाही<br><small>Route Add करा</small></p></div>';
+      return;
+    }
+    var html = '';
+    data.forEach(function(route) {
+      var stopsArr = route.stops || [];
+      var stopsText = stopsArr.slice(0,3).join(' → ');
+      if (stopsArr.length > 3) stopsText += ' ... (' + stopsArr.length + ' stops)';
+      html += '<div class="route-item">' +
+        '<div class="route-header">' +
+          '<div class="route-name">' + route.route_name + '</div>' +
+          '<div class="route-type">' + (route.bus_type || '') + '</div>' +
+        '</div>' +
+        '<div class="route-stops">📍 ' + stopsText + '</div>' +
+        '<div class="route-actions">' +
+          '<button class="btn-sm" style="background:#334155;color:#94a3b8" onclick="viewStops(\'' + route.id + '\',\'' + route.route_name + '\')">Stops बघा</button>' +
+          '<button class="btn-sm" style="background:#ef4444;color:white" onclick="deleteRoute(\'' + route.id + '\')">Delete</button>' +
+        '</div>' +
+        '</div>';
+    });
+    list.innerHTML = html;
+  })
+  .catch(function() { showToast('❌ Error loading routes'); });
+}
+
+// VIEW STOPS
+function viewStops(id, name) {
+  fetch(SURL + '/rest/v1/routes?id=eq.' + id + '&select=stops', {
+    headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data[0]) {
+      var s = data[0].stops || [];
+      var msg = name + ' चे stops:\n\n';
+      s.forEach(function(stop, i) { msg += (i+1) + '. ' + stop + '\n'; });
+      alert(msg);
+    }
+  });
+}
+
+// DELETE ROUTE
+function deleteRoute(id) {
+  if (!confirm('हा Route delete करायचा आहे का?')) return;
+  fetch(SURL + '/rest/v1/routes?id=eq.' + id, {
+    method: 'DELETE',
+    headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+  })
+  .then(function() {
+    showToast('✅ Route delete झाला!');
+    loadRoutes();
+  });
+}
+
+// TOAST
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+</script>
+</body>
+</html>
