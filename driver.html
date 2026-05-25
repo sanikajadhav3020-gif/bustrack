@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BusTrack - Driver</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+.header { background: #1e293b; padding: 16px 20px; border-bottom: 2px solid #3b82f6; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-size: 1.3rem; font-weight: 800; color: #3b82f6; }
+.driver-badge { background: #3b82f6; color: white; font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+.content { padding: 16px; padding-bottom: 80px; }
+.card { background: #1e293b; border-radius: 16px; padding: 18px; margin-bottom: 14px; border: 1px solid #334155; }
+.card-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #3b82f6; margin-bottom: 14px; }
+.input-field { width: 100%; background: #0f172a; border: 2px solid #334155; border-radius: 12px; padding: 13px 16px; color: #e2e8f0; font-size: 1rem; margin-bottom: 10px; outline: none; }
+.input-field:focus { border-color: #3b82f6; }
+select.input-field { appearance: none; }
+.btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
+.btn-blue { background: #3b82f6; color: white; }
+.btn-green { background: #10b981; color: white; }
+.btn-red { background: #ef4444; color: white; }
+.status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 50px; font-weight: 700; font-size: 0.9rem; margin-bottom: 14px; }
+.status-on { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+.status-off { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+.pulse { animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.info-item { background: #0f172a; border-radius: 12px; padding: 12px; }
+.info-label { font-size: 0.65rem; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; }
+.info-value { font-size: 0.95rem; font-weight: 700; color: #e2e8f0; }
+.blue { color: #3b82f6; }
+.stop-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.stop-option { display: flex; align-items: center; gap: 10px; background: #0f172a; border-radius: 10px; padding: 12px; border: 2px solid #334155; cursor: pointer; }
+.stop-option.active { border-color: #10b981; background: rgba(16,185,129,0.1); }
+.stop-num { background: #334155; color: #94a3b8; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+.stop-option.active .stop-num { background: #10b981; color: white; }
+.stop-name-text { font-size: 0.9rem; font-weight: 600; flex: 1; }
+.stop-check { color: #10b981; font-size: 1.2rem; display: none; }
+.stop-option.active .stop-check { display: block; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; border: 1px solid #3b82f6; border-radius: 12px; padding: 12px 22px; font-weight: 600; font-size: 0.9rem; z-index: 999; transition: transform 0.4s; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.step { display: none; }
+.step.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🚌 BusTrack Driver</div>
+  <div class="driver-badge">DRIVER</div>
+</div>
+
+<div class="content">
+
+  <!-- STEP 1 -->
+  <div class="step active" id="step1">
+    <div class="card">
+      <div class="card-title">👤 Driver माहिती</div>
+      <input class="input-field" id="driverName" placeholder="Driver चे नाव" />
+      <input class="input-field" id="conductorName" placeholder="Conductor चे नाव (optional)" />
+    </div>
+    <div class="card">
+      <div class="card-title">🚌 Route निवडा</div>
+      <select class="input-field" id="routeSelect">
+        <option value="">Route निवडा...</option>
+      </select>
+    </div>
+    <button class="btn btn-blue" onclick="goToStep2()">पुढे जा →</button>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step" id="step2">
+    <div class="card">
+      <div class="card-title">📍 सध्याचा Stop निवडा</div>
+      <div id="currentStopDisplay" style="font-size:1rem;font-weight:700;color:#10b981;margin-bottom:12px;padding:10px;background:#0f172a;border-radius:10px">
+        कोणताही Stop निवडला नाही
+      </div>
+      <div class="stop-list" id="stopList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📡 Location Sharing</div>
+      <div id="driverStatus" class="status-badge status-off">
+        <span class="dot"></span> <span>Sharing बंद आहे</span>
+      </div>
+      <button class="btn btn-green" id="shareBtn" onclick="toggleSharing()">▶️ Sharing सुरू करा</button>
+    </div>
+    <div class="card" id="liveCard" style="display:none">
+      <div class="card-title">📊 Live Data</div>
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">Latitude</div><div class="info-value" id="dLat">---</div></div>
+        <div class="info-item"><div class="info-label">Longitude</div><div class="info-value" id="dLng">---</div></div>
+        <div class="info-item"><div class="info-label">Speed</div><div class="info-value blue" id="dSpeed">0 km/h</div></div>
+        <div class="info-item"><div class="info-label">Accuracy</div><div class="info-value" id="dAcc">---</div></div>
+      </div>
+    </div>
+    <button class="btn" style="background:#334155;color:#94a3b8;margin-top:8px" onclick="goToStep1()">← मागे जा</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var SURL = 'https://mifvujezesxbvlvgslcn.supabase.co';
+var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZnZ1amV6ZXN4YnZsdmdzbGNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5OTA3NzEsImV4cCI6MjA5MTU2Njc3MX0.SlMxrIDW9eVPRaTn_J6JGly4jON8pFfaCLiQxrx5b7c';
+var isSharing = false;
+var watchId = null;
+var driverId = 'driver_' + Math.random().toString(36).substr(2,8);
+var selectedRoute = null;
+var currentStop = null;
+var stops = [];
+
+function loadRoutes() {
+  fetch(SURL + '/rest/v1/routes?select=*&order=route_name', {
+    headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var select = document.getElementById('routeSelect');
+    (data || []).forEach(function(route) {
+      var opt = document.createElement('option');
+      opt.value = route.id;
+      opt.textContent = route.route_name + ' (' + (route.bus_type || '') + ')';
+      opt.setAttribute('data-stops', JSON.stringify(route.stops || []));
+      opt.setAttribute('data-name', route.route_name);
+      select.appendChild(opt);
+    });
+  });
+}
+
+function goToStep2() {
+  var name = document.getElementById('driverName').value.trim();
+  var routeId = document.getElementById('routeSelect').value;
+  if (!name) { showToast('नाव टाका!'); return; }
+  if (!routeId) { showToast('Route निवडा!'); return; }
+
+  var opt = document.getElementById('routeSelect').options[document.getElementById('routeSelect').selectedIndex];
+  selectedRoute = { id: routeId, name: opt.getAttribute('data-name') };
+  stops = JSON.parse(opt.getAttribute('data-stops') || '[]');
+
+  var list = document.getElementById('stopList');
+  list.innerHTML = '';
+  stops.forEach(function(stop, i) {
+    var div = document.createElement('div');
+    div.className = 'stop-option';
+    div.id = 'stop_' + i;
+    div.innerHTML = '<div class="stop-num">' + (i+1) + '</div><div class="stop-name-text">' + stop + '</div><div class="stop-check">✓</div>';
+    div.onclick = function() { selectStop(i, stop); };
+    list.appendChild(div);
+  });
+
+  document.getElementById('step1').classList.remove('active');
+  document.getElementById('step2').classList.add('active');
+}
+
+function goToStep1() {
+  if (isSharing) { showToast('आधी Sharing थांबवा!'); return; }
+  document.getElementById('step2').classList.remove('active');
+  document.getElementById('step1').classList.add('active');
+}
+
+function selectStop(index, stopName) {
+  currentStop = stopName;
+  document.getElementById('currentStopDisplay').textContent = '📍 ' + stopName;
+  document.querySelectorAll('.stop-option').forEach(function(el) { el.classList.remove('active'); });
+  document.getElementById('stop_' + index).classList.add('active');
+}
+
+function toggleSharing() {
+  if (!isSharing) startSharing();
+  else stopSharing();
+}
+
+function startSharing() {
+  if (!navigator.geolocation) { showToast('GPS नाही!'); return; }
+  if (!currentStop) { showToast('आधी Stop निवडा!'); return; }
+  showToast('GPS शोधत आहे...');
+  watchId = navigator.geolocation.watchPosition(
+    function(pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      var acc = pos.coords.accuracy;
+      var spd = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(1) : 0;
+      if (!isSharing) {
+        isSharing = true;
+        document.getElementById('driverStatus').className = 'status-badge status-on';
+        document.getElementById('driverStatus').innerHTML = '<span class="dot pulse"></span> <span>Sharing सुरू आहे ✅</span>';
+        document.getElementById('shareBtn').className = 'btn btn-red';
+        document.getElementById('shareBtn').textContent = '⏹️ Sharing थांबवा';
+        document.getElementById('liveCard').style.display = 'block';
+        showToast('Sharing सुरू झाले!');
+      }
+      document.getElementById('dLat').textContent = lat.toFixed(5);
+      document.getElementById('dLng').textContent = lng.toFixed(5);
+      document.getElementById('dSpeed').textContent = spd + ' km/h';
+      document.getElementById('dAcc').textContent = '+-' + Math.round(acc) + 'm';
+      fetch(SURL + '/rest/v1/bus_live', {
+        method: 'POST',
+        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ id: driverId, route_id: selectedRoute.id, driver_name: document.getElementById('driverName').value.trim(), conductor_name: document.getElementById('conductorName').value.trim(), current_lat: lat, current_lng: lng, current_stop: currentStop, speed: parseFloat(spd), updated_at: new Date().toISOString() })
+      });
+    },
+    function(err) {
+      var msgs = {1:'GPS permission द्या', 2:'GPS signal नाही', 3:'GPS timeout'};
+      showToast(msgs[err.code] || 'GPS error');
+    },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+function stopSharing() {
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  isSharing = false;
+  fetch(SURL + '/rest/v1/bus_live?id=eq.' + driverId, { method: 'DELETE', headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+  document.getElementById('driverStatus').className = 'status-badge status-off';
+  document.getElementById('driverStatus').innerHTML = '<span class="dot"></span> <span>Sharing बंद आहे</span>';
+  document.getElementById('shareBtn').className = 'btn btn-green';
+  document.getElementById('shareBtn').textContent = '▶️ Sharing सुरू करा';
+  document.getElementById('liveCard').style.display = 'none';
+  showToast('Sharing थांबवले');
+}
+
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+loadRoutes();
+</script>
+</body>
+</html>
